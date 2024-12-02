@@ -29,16 +29,16 @@ import re
 EXAM_FOLDER_PATH = r"C:\Exam program"
 LOCAL_BACKUP_PATH = os.path.join(EXAM_FOLDER_PATH, "Backups")
 
-DATASETS_FILE_NAME = "open_me.mrb" #"open_me.mrb"
+DATASETS_FILE_NAME = "Exam_program_scene.mrml" #"open_me.mrb"
 STUDENT_STRUCTURES_FILE_NAME = "Exams.csv"
 
 BIG_BRAIN = "Big_Brain"
 IN_VIVO = "in_vivo"
 EX_VIVO = "ex_vivo"
 
-BIG_BRAIN_VOLUME_NAME = "vtkMRMLScalarVolumeNode3"
-IN_VIVO_VOLUME_NAME = "vtkMRMLScalarVolumeNode1"
-EX_VIVO_VOLUME_NAME = "vtkMRMLScalarVolumeNode2"
+BIG_BRAIN_VOLUME_NAME = "vtkMRMLScalarVolumeNode1"
+IN_VIVO_VOLUME_NAME = "vtkMRMLScalarVolumeNode2"
+EX_VIVO_VOLUME_NAME = "vtkMRMLScalarVolumeNode3"
 
 NUMBER_OF_QUESTIONS = 10
 Q_MESSAGE_BOX_TITLE = "BV4 Exam program"
