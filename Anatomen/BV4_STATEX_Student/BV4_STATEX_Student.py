@@ -69,6 +69,7 @@ i kursen Basvetenskap 4 på Karolinska Institutet.
         self.parent.acknowledgementText = _("""
 This file was originally developed by Christian Andersson, Karolinska Institutet.
 \nchristian.andersson.2@stud.ki.se
+First tested by: William H. Wu, Karolinska Institutet.
 """)
 
 
