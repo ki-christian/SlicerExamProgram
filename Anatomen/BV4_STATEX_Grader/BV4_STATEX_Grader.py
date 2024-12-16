@@ -29,7 +29,7 @@ import re
 EXAM_FOLDER_PATH = r"C:\Exam program"
 LOCAL_BACKUP_PATH = os.path.join(EXAM_FOLDER_PATH, "Backups")
 
-DATASETS_FILE_NAME = "open_me.mrb" #"open_me.mrb"
+DATASETS_FILE_NAME = "Exam_program_scene.mrml" #"open_me.mrb"
 STUDENT_STRUCTURES_FILE_NAME = "Exams.csv"
 
 BIG_BRAIN = "Big_Brain"
