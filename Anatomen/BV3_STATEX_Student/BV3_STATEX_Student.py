@@ -19,24 +19,46 @@ from slicer import vtkMRMLScalarVolumeNode
 import os
 import csv
 
-DATASETS_FILE_NAME = "open_me.mrb" #"open_me.mrb"
 STUDENT_STRUCTURES_FILE_NAME = "Exams.csv"
-
-BIG_BRAIN = "Big_Brain"
-IN_VIVO = "in_vivo"
-EX_VIVO = "ex_vivo"
 
 NECK = "NECK"
 BUK_BACKEN = "BUKBACKEN"
+HELKROPP = "HELKROPP"
 HJARTA = "HJARTA"
+MANIX_ANGIO_CT = "MANIX_ANGIO_CT"
+THORAX_LUNGA = "THORAX_LUNGA"
+UNDERARM_HAND = "UNDERARM_HAND"
+FOT_LJUS = "FOT_LJUS"
+FOT_MORK = "FOT_MORK"
+KNA_MUSKEL = "KNA_MUSKEL"
+KNA_MORK = "KNA_MORK"
+KNA_TOF = "KNA_TOF"
 
 NECK_FILE_NAME = "2 NECK WITH  2.00  ax.nrrd"
 BUK_BACKEN_FILE_NAME = "BukBäcken kontrast.nrrd"
+HELKROPP_FILE_NAME = "Helkropp.nrrd"
 HJARTA_FILE_NAME = "Hjärta.nrrd"
+MANIX_ANGIO_CT_FILE_NAME = "MANIX Angio CT.nrrd"
+THORAX_LUNGA_FILE_NAME = "Thorax+Lunga.nrrd"
+UNDERARM_HAND_FILE_NAME = "Underarm_Hand.nrrd"
+FOT_LJUS_FILE_NAME = os.path.join("MR", "Fot_Ljus.nrrd")
+FOT_MORK_FILE_NAME = os.path.join("MR", "Fot_Mörk.nrrd")
+KNA_MUSKEL_FILE_NAME = os.path.join("MR", "Knä_Muskel.nrrd")
+KNA_MORK_FILE_NAME = os.path.join("MR", "Knä_Mörk.nrrd")
+KNA_TOF_FILE_NAME = os.path.join("MR", "Knä_TOF.nrrd")
 
 NECK_VOLUME_NAME = "vtkMRMLScalarVolumeNode1"
 BUK_BACKEN_VOLUME_NAME = "vtkMRMLScalarVolumeNode2"
-HJARTA_VOLUME_NAME = "vtkMRMLScalarVolumeNode3"
+HELKROPP_VOLUME_NAME = "vtkMRMLScalarVolumeNode3"
+HJARTA_VOLUME_NAME = "vtkMRMLScalarVolumeNode4"
+MANIX_ANGIO_CT_VOLUME_NAME = "vtkMRMLScalarVolumeNode5"
+THORAX_LUNGA_VOLUME_NAME = "vtkMRMLScalarVolumeNode6"
+UNDERARM_HAND_VOLUME_NAME = "vtkMRMLScalarVolumeNode7"
+FOT_LJUS_VOLUME_NAME = "vtkMRMLScalarVolumeNode8"
+FOT_MORK_VOLUME_NAME = "vtkMRMLScalarVolumeNode9"
+KNA_MUSKEL_VOLUME_NAME = "vtkMRMLScalarVolumeNode10"
+KNA_MORK_VOLUME_NAME = "vtkMRMLScalarVolumeNode11"
+KNA_TOF_VOLUME_NAME = "vtkMRMLScalarVolumeNode12"
 
 NUMBER_OF_QUESTIONS = 3
 Q_MESSAGE_BOX_TITLE = "BV3 Exam program"
@@ -357,7 +379,16 @@ class BV3_STATEX_StudentLogic(ScriptedLoadableModuleLogic):
         #slicer.util.loadScene(os.path.join(self.dataset_path, DATASETS_FILE_NAME))
         slicer.util.loadVolume(os.path.join(self.dataset_path, NECK_FILE_NAME))
         slicer.util.loadVolume(os.path.join(self.dataset_path, BUK_BACKEN_FILE_NAME))
+        slicer.util.loadVolume(os.path.join(self.dataset_path, HELKROPP_FILE_NAME))
         slicer.util.loadVolume(os.path.join(self.dataset_path, HJARTA_FILE_NAME))
+        slicer.util.loadVolume(os.path.join(self.dataset_path, MANIX_ANGIO_CT_FILE_NAME))
+        slicer.util.loadVolume(os.path.join(self.dataset_path, THORAX_LUNGA_FILE_NAME))
+        slicer.util.loadVolume(os.path.join(self.dataset_path, UNDERARM_HAND_FILE_NAME))
+        slicer.util.loadVolume(os.path.join(self.dataset_path, FOT_LJUS_FILE_NAME))
+        slicer.util.loadVolume(os.path.join(self.dataset_path, FOT_MORK_FILE_NAME))
+        slicer.util.loadVolume(os.path.join(self.dataset_path, KNA_MUSKEL_FILE_NAME))
+        slicer.util.loadVolume(os.path.join(self.dataset_path, KNA_MORK_FILE_NAME))
+        slicer.util.loadVolume(os.path.join(self.dataset_path, KNA_TOF_FILE_NAME))
 
     def onLoadStructuresButtonPressed(self, exam_nr):
         if self.exam_active:
@@ -399,7 +430,7 @@ class BV3_STATEX_StudentLogic(ScriptedLoadableModuleLogic):
         if reply == qt.QMessageBox.No:
             return -1
         slicer.mrmlScene.RemoveNode(self.node)
-        self.resetWindow()
+        #self.resetWindow()
         self.reset()
 
     def displaySelectVolume(self, a):
@@ -436,9 +467,36 @@ class BV3_STATEX_StudentLogic(ScriptedLoadableModuleLogic):
         elif dataset.lower() == BUK_BACKEN.lower():
             self.displaySelectVolume(BUK_BACKEN_VOLUME_NAME)
             self.current_dataset = BUK_BACKEN
+        elif dataset.lower() == HELKROPP.lower():
+            self.displaySelectVolume(HELKROPP_VOLUME_NAME)
+            self.current_dataset = HELKROPP
         elif dataset.lower() == HJARTA.lower():
             self.displaySelectVolume(HJARTA_VOLUME_NAME)
             self.current_dataset = HJARTA
+        elif dataset.lower() == MANIX_ANGIO_CT.lower():
+            self.displaySelectVolume(MANIX_ANGIO_CT_VOLUME_NAME)
+            self.current_dataset = MANIX_ANGIO_CT
+        elif dataset.lower() == THORAX_LUNGA.lower():
+            self.displaySelectVolume(THORAX_LUNGA_VOLUME_NAME)
+            self.current_dataset = THORAX_LUNGA
+        elif dataset.lower() == UNDERARM_HAND.lower():
+            self.displaySelectVolume(UNDERARM_HAND_VOLUME_NAME)
+            self.current_dataset = UNDERARM_HAND
+        elif dataset.lower() == FOT_LJUS.lower():
+            self.displaySelectVolume(FOT_LJUS_VOLUME_NAME)
+            self.current_dataset = FOT_LJUS
+        elif dataset.lower() == FOT_MORK.lower():
+            self.displaySelectVolume(FOT_MORK_VOLUME_NAME)
+            self.current_dataset = FOT_MORK
+        elif dataset.lower() == KNA_MUSKEL.lower():
+            self.displaySelectVolume(KNA_MUSKEL_VOLUME_NAME)
+            self.current_dataset = KNA_MUSKEL
+        elif dataset.lower() == KNA_MORK.lower():
+            self.displaySelectVolume(KNA_MORK_VOLUME_NAME)
+            self.current_dataset = KNA_MORK
+        elif dataset.lower() == KNA_TOF.lower():
+            self.displaySelectVolume(KNA_TOF_VOLUME_NAME)
+            self.current_dataset = KNA_TOF
         else:
             print(f"\nDataset: {dataset} existerar ej\n")
 
