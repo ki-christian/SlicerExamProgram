@@ -456,7 +456,7 @@ class BV4_PassLogic(ScriptedLoadableModuleLogic):
                                         qt.QMessageBox.Yes | qt.QMessageBox.No)
         if reply == qt.QMessageBox.No:
             return -1
-        self.reset()
+        self.resetState()
         self.resetWindow()
         self.addNodeAndControlPoints(self.structures)
         self.setStructureButtonsText(structures=self.structures)
