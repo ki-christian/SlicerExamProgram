@@ -4,8 +4,13 @@ from pathlib import Path
 from typing import Annotated, Optional
 
 import vtk
+import slicer
+import qt
+import math
+import functools
+import csv
+import re
 
-import slicer, qt, math
 from slicer.i18n import tr as _
 from slicer.i18n import translate
 from slicer.ScriptedLoadableModule import *
@@ -17,32 +22,25 @@ from slicer.parameterNodeWrapper import (
 
 from slicer import vtkMRMLScalarVolumeNode
 
-import functools
-
-import csv
-import re
-
+# Configuration constants
 ROOM_NUMBERS = ["601A", "601B", "602A", "602B", "603A", "603B", "604A", "604B", "605A", "605B", "606A", "606B",
                 "607A", "607B", "608A", "608B", "609A", "609B", "610A", "610B", "611A", "611B", "612A", "612B"]
 
 DATASETS_FILE_NAME = "open_me.mrb" #"open_me.mrb"
 STUDENT_STRUCTURES_FILE_NAME = "Exams.csv"
 
-BIG_BRAIN = "Big_Brain"
-IN_VIVO = "in_vivo"
-EX_VIVO = "ex_vivo"
-
-BIG_BRAIN_VOLUME_NAME = "vtkMRMLScalarVolumeNode3"
-IN_VIVO_VOLUME_NAME = "vtkMRMLScalarVolumeNode1"
-EX_VIVO_VOLUME_NAME = "vtkMRMLScalarVolumeNode2"
-
-Q_MESSAGE_BOX_TITLE = "BV4 Exam program"
-
 class SessionType:
     INTRO = "INTRO"
     MOTORIK = "MOTORIK"
     SENSORIK = "SENSORIK"
     WORKSHOP = "WORKSHOP"
+
+
+# Dataset and Session Constants
+class DatasetType:
+    BIG_BRAIN = "Big_Brain"
+    IN_VIVO = "in_vivo"
+    EX_VIVO = "ex_vivo"
 
 
 SESSION_FILE_MAP = {
@@ -52,8 +50,15 @@ SESSION_FILE_MAP = {
     SessionType.WORKSHOP: "Workshop.csv"
 }
 
+DATASET_MAP = {
+    DatasetType.BIG_BRAIN.lower(): ("vtkMRMLScalarVolumeNode3", DatasetType.BIG_BRAIN),
+    DatasetType.IN_VIVO.lower(): ("vtkMRMLScalarVolumeNode1", DatasetType.IN_VIVO),
+    DatasetType.EX_VIVO.lower(): ("vtkMRMLScalarVolumeNode2", DatasetType.EX_VIVO),
+}
 
+# Configuration
 STRUCTURES_PER_PAGE = 20 # STRUCTURE_BUTTON_COUNT
+Q_MESSAGE_BOX_TITLE = "BV4 Exam program"
 
 #
 # BV4_Pass
@@ -130,10 +135,12 @@ class BV4_PassWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
 
     def setupStructureButtons(self):
         for i in range(1, STRUCTURES_PER_PAGE + 1):
-            getattr(self.ui, f"pushButton_Structure_{i}").connect(
-                "clicked(bool)", lambda _, i=i: self.onStructureButton(i))
-            getattr(self.ui, f"pushButton_Place_Structure_{i}").connect(
-                "clicked(bool)", lambda _, i=i: self.onPlaceStructureButton(i))
+            getattr(self.ui, f"pushButton_Structure_{i}").connect("clicked(bool)",
+                                                                  lambda _, i=i: self.onStructureButton(i))
+            getattr(self.ui, f"pushButton_Place_Structure_{i}").connect("clicked(bool)",
+                                                                        lambda _, i=i: self.onPlaceStructureButton(i))
+            getattr(self.ui, f"pushButton_Request_Help_{i}").connect("clicked(bool)",
+                                                                     lambda _, i=i: self.onRequestHelpButton(i))
 
     def loadUI(self):
         uiWidget = slicer.util.loadUI(self.resourcePath("UI/BV4_Pass.ui"))
@@ -266,11 +273,14 @@ class BV4_PassWidget(ScriptedLoadableModuleWidget, VTKObservationMixin):
             # Möjligtvis införa printdebugging? Exempelvis: Load Structure Button pressed.
             room_number = self.ui.inputBox_Room_Number.text.strip()
             if not room_number:
-                qt.QMessageBox.warning(slicer.util.mainWindow(), "Room Missing", "Ange ett rumsnummer.")
+                qt.QMessageBox.warning(slicer.util.mainWindow(), Q_MESSAGE_BOX_TITLE, "Ange ett rumsnummer.")
                 return
 
             ret_value = self.logic.onLoadStructuresButtonPressed(session, room_number)
             # Kanske en funktion i logic-klassen med meddelande
+            if ret_value == -2:
+                qt.QMessageBox.warning(slicer.util.mainWindow(), Q_MESSAGE_BOX_TITLE, "Ange ett giltigt rumsnummer.")
+                return
             if ret_value != -1:
                 # Likaså här
                 self.updateStructureButtons()
@@ -340,7 +350,7 @@ class BV4_PassLogic(ScriptedLoadableModuleLogic):
         self.mega_folder_path = ""
         self.dataset_path = ""
         self.mega_markup_path = ""
-        self.student_structures_path = r"C:\Exam program\Slicerpass\Strukturer"
+        self.student_structures_path = "C:\Exam program\Slicerpass\Strukturer"
 
         self.number_of_questions = 0
         self.exam_active = False
@@ -348,10 +358,7 @@ class BV4_PassLogic(ScriptedLoadableModuleLogic):
         self.current_dataset = ""
         self.answered_questions = []
         self.node = None
-        self.flip_computer = 1
         self.student_name = ""
-        self.exam_nr = 0
-        self.filename = ""
         self.page = 0
         self.structure_buttons_texts = [""] * STRUCTURES_PER_PAGE
         self.setStructureButtonsText()
@@ -399,15 +406,11 @@ class BV4_PassLogic(ScriptedLoadableModuleLogic):
         stopTime = time.time()
         logging.info(f"Processing completed in {stopTime-startTime:.2f} seconds")
 
-    def reset(self):
-        self.exam_active = False
-        self.structures = []
+    def resetState(self):
+        slicer.mrmlScene.RemoveNode(self.node)
         self.current_dataset = ""
-        self.answered_questions = [False] * self.number_of_questions
-        self.node = None
+        self.resetAnsweredQuestions()
         self.student_name = ""
-        self.exam_nr = 0
-        self.filename = ""
         self.page = 0
 
     # KOLLA
@@ -416,8 +419,6 @@ class BV4_PassLogic(ScriptedLoadableModuleLogic):
         self.dataset_path = Path(self.mega_folder_path) / "BV4" / "Dataset"
         self.mega_markup_path = Path(self.mega_folder_path) / "BV4" / "Examination" / "Markups"
         self.student_structures_path = Path(self.mega_folder_path) / "Exam program" / "Slicerpass" / "Strukturer"
-        if not os.path.isdir(LOCAL_BACKUP_PATH):
-            os.makedirs(LOCAL_BACKUP_PATH)
 
     def getStructureIndex(self, button_number):
         return button_number + STRUCTURES_PER_PAGE * self.page
@@ -432,7 +433,7 @@ class BV4_PassLogic(ScriptedLoadableModuleLogic):
                                    f"Kan ej ladda in strukturer medan en exam är aktiv.")
             return -1
         if room_number not in ROOM_NUMBERS:
-            return -1
+            return -2
         self.retrieveStructures(1, session=session)
         self.addNodeAndControlPoints(self.structures)
         self.exam_active = True
@@ -455,9 +456,8 @@ class BV4_PassLogic(ScriptedLoadableModuleLogic):
                                         qt.QMessageBox.Yes | qt.QMessageBox.No)
         if reply == qt.QMessageBox.No:
             return -1
-        slicer.mrmlScene.RemoveNode(self.node)
+        self.reset()
         self.resetWindow()
-        self.resetAnsweredQuestions()
         self.addNodeAndControlPoints(self.structures)
         self.setStructureButtonsText(structures=self.structures)
         self.setPlaceStructureButtonsText()
@@ -490,10 +490,12 @@ class BV4_PassLogic(ScriptedLoadableModuleLogic):
                                             f"Du har redan placerat ut {self.structures[structure_number - 1]['Structure']}.\nÄr du säker på att du vill placera om den?",
                                             qt.QMessageBox.Yes | qt.QMessageBox.No)
             if reply == qt.QMessageBox.No:
-                return
+                return -1
         self.setNewControlPoint(self.node, structure_number - 1)
 
     def onRequestHelpButtonPressed(self, button_number):
+        if not self.exam_active:
+            return -1
         qt.QMessageBox.warning(slicer.util.mainWindow(), "Hjälp", "Hjälp är på väg!")
 
     def onBackwardsButtonPressed(self):
@@ -513,21 +515,21 @@ class BV4_PassLogic(ScriptedLoadableModuleLogic):
     def setStructureButtonsText(self, structures=None, page=0):
         # texts --> strings?
         for i in range(0, STRUCTURES_PER_PAGE):
-            index = i + STRUCTURES_PER_PAGE * self.page # structure_number
+            structure_number = self.getStructureIndex(i)
             if structures is None: # Kan nog flytta ut
-                structure_str = f"Struktur {index + 1}"
-            elif index >= len(structures):
+                structure_str = f"Struktur {structure_number + 1}"
+            elif structure_number >= len(structures):
                 structure_str = ""
             else:
-                structure_str = f"Struktur {index + 1}: {structures[index]['Structure']} i {structures[index]['Dataset']}"
+                structure_str = f"Struktur {structure_number + 1}: {structures[structure_number]['Structure']} i {structures[structure_number]['Dataset']}"
             self.structure_buttons_texts[i] = structure_str
 
     def setPlaceStructureButtonsText(self):
         for i in range(len(self.place_structure_buttons_texts)):
-            index = i + STRUCTURES_PER_PAGE * self.page  # structure_number
-            if not self.exam_active or index >= len(self.structures):
+            structure_number = self.getStructureIndex(i)
+            if not self.exam_active or structure_number >= len(self.structures):
                 structure_str = ""
-            elif self.answered_questions[index]:
+            elif self.answered_questions[structure_number]:
                 structure_str = "(✓)"
             else:
                 structure_str = "(X)"
@@ -544,7 +546,7 @@ class BV4_PassLogic(ScriptedLoadableModuleLogic):
 
     # Byter dataset till big brain och fokuserar på koordinaterna [0, 0, 0]
     def resetWindow(self):
-        self.changeDataset(BIG_BRAIN)
+        self.changeDataset(DatasetType.BIG_BRAIN)
         slicer.modules.markups.logic().JumpSlicesToLocation(0, 0, 0, True)
 
     # Öppnar csv-filen med strukturer och läser in alla rader tillhörande exam_nr
@@ -559,18 +561,20 @@ class BV4_PassLogic(ScriptedLoadableModuleLogic):
         return structures
 
     # Ändrar nuvarande dataset till specificerat dataset
-    def changeDataset(self, dataset):
-        if dataset.lower() == BIG_BRAIN.lower():
-            self.displaySelectVolume(BIG_BRAIN_VOLUME_NAME)
-            self.current_dataset = BIG_BRAIN
-        elif dataset.lower() == IN_VIVO.lower():
-            self.displaySelectVolume(IN_VIVO_VOLUME_NAME)
-            self.current_dataset = IN_VIVO
-        elif dataset.lower() == EX_VIVO.lower():
-            self.displaySelectVolume(EX_VIVO_VOLUME_NAME)
-            self.current_dataset = EX_VIVO
+    def changeDataset(self, dataset: str):
+        key = dataset.lower()
+        if key in DATASET_MAP:
+            volume_name, canonical_name = DATASET_MAP[key]
+            self.displaySelectVolume(volume_name)
+            self.current_dataset = canonical_name
+            logging.info(f"Changed dataset to {canonical_name}")
         else:
-            print(f"\nDataset: {dataset} existerar ej\n")
+            logging.warning(f"Dataset not recognized: {dataset}")
+            qt.QMessageBox.warning(
+                slicer.util.mainWindow(),
+                Q_MESSAGE_BOX_TITLE,
+                f"Dataset '{dataset}' är inte giltigt eller saknas."
+            )
 
     # Lägger till en nod med namnet exam_nr och lägger till tillhörande control points
     # för varje struktur i structures. Namnet på varje control point blir strukturens
