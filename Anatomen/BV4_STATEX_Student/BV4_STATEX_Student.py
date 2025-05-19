@@ -58,7 +58,7 @@ class BV4_STATEX_Student(ScriptedLoadableModule):
     def __init__(self, parent):
         ScriptedLoadableModule.__init__(self, parent)
         self.parent.title = _("BV4_STATEX_Student")
-        self.parent.categories = ["Anatomen"] # [translate("qSlicerAbstractCoreModule", "Anatomen")]
+        self.parent.categories = ["Basvetenskap 4"] # [translate("qSlicerAbstractCoreModule", "Anatomen")]
         self.parent.dependencies = []  # TODO: add here list of module names that this module requires
         self.parent.contributors = ["Christian Andersson (Karolinska Institutet)"]
         # TODO: update with short description of the module and a link to online module documentation
@@ -451,9 +451,9 @@ class BV4_STATEX_StudentLogic(ScriptedLoadableModuleLogic):
         self.local_folder_path = local_folder_path
         self.dataset_path = os.path.join(os.path.join(self.mega_folder_path, "BV4"), "Dataset")
         self.mega_markup_path = os.path.join(os.path.join(os.path.join(self.mega_folder_path, "BV4"), "Examination"), "Markups")
-        self.synology_markup_path = os.path.join(os.path.join(os.path.join(self.synology_markup_path, "BV4"), "Examination"), "Markups")
-        self.local_markup_path = os.path.join(os.path.join(os.path.join(self.local_markup_path, "BV4"), "Examination"), "Markups")
-        self.student_structures_path = os.path.join(os.path.join(os.path.join(self.mega_folder_path, "BV4"), "Examination"), "Exams")
+        self.synology_markup_path = os.path.join(os.path.join(os.path.join(self.synology_folder_path, "BV4"), "Examination"), "Markups")
+        self.local_markup_path = os.path.join(os.path.join(os.path.join(self.local_folder_path, "BV4"), "Examination"), "Markups")
+        self.student_structures_path = os.path.join(os.path.join(os.path.join(self.synology_folder_path, "BV4"), "Examination"), "Exams")
         if not os.path.isdir(LOCAL_BACKUP_PATH):
             os.makedirs(LOCAL_BACKUP_PATH)
 
