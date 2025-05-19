@@ -35,10 +35,12 @@ STUDENT_STRUCTURES_FILE_NAME = "Exams.csv"
 BIG_BRAIN = "Big_Brain"
 IN_VIVO = "in_vivo"
 EX_VIVO = "ex_vivo"
+EXAMD ="EXAMD"
 
 BIG_BRAIN_VOLUME_NAME = "vtkMRMLScalarVolumeNode1"
 IN_VIVO_VOLUME_NAME = "vtkMRMLScalarVolumeNode2"
 EX_VIVO_VOLUME_NAME = "vtkMRMLScalarVolumeNode3"
+EXAMD_VOLUME_NAME = "vtkMRMLScalarVolumeNode4"
 
 NUMBER_OF_QUESTIONS = 10
 Q_MESSAGE_BOX_TITLE = "BV4 Exam program"
@@ -250,7 +252,7 @@ class BV4_STATEX_StudentWidget(ScriptedLoadableModuleWidget, VTKObservationMixin
     def onLoadDatasetsButton(self) -> None:
         """Run processing when user clicks "Ladda in strukturer" button."""
         with slicer.util.tryWithErrorDisplay(_("Failed to compute results."), waitCursor=True):
-            self.logic.onLoadDatasetsButtonPressed(self.ui.lineEdit_Mega_Folder.text)
+            self.logic.onLoadDatasetsButtonPressed(r"C:/Mega", r"C:/SynologyDrive", r"C:/Exam program")
 
     def onLoadStructuresButton(self) -> None:
         """Run processing when user clicks "Ladda in strukturer" button."""
@@ -370,8 +372,12 @@ class BV4_STATEX_StudentLogic(ScriptedLoadableModuleLogic):
         """Called when the logic class is instantiated. Can be used for initializing member variables."""
         ScriptedLoadableModuleLogic.__init__(self)
         self.mega_folder_path = ""
+        self.synology_folder_path = ""
+        self.local_folder_path = ""
         self.dataset_path = ""
         self.mega_markup_path = ""
+        self.synology_markup_path = ""
+        self.local_markup_path = ""
         self.student_structures_path = ""
 
         self.exam_active = False
@@ -439,10 +445,14 @@ class BV4_STATEX_StudentLogic(ScriptedLoadableModuleLogic):
         self.exam_nr = 0
         self.filename = ""
 
-    def setPaths(self, mega_folder_path):
+    def setPaths(self, mega_folder_path, synology_folder_path, local_folder_path):
         self.mega_folder_path = mega_folder_path
+        self.synology_folder_path = synology_folder_path
+        self.local_folder_path = local_folder_path
         self.dataset_path = os.path.join(os.path.join(self.mega_folder_path, "BV4"), "Dataset")
         self.mega_markup_path = os.path.join(os.path.join(os.path.join(self.mega_folder_path, "BV4"), "Examination"), "Markups")
+        self.synology_markup_path = os.path.join(os.path.join(os.path.join(self.synology_markup_path, "BV4"), "Examination"), "Markups")
+        self.local_markup_path = os.path.join(os.path.join(os.path.join(self.local_markup_path, "BV4"), "Examination"), "Markups")
         self.student_structures_path = os.path.join(os.path.join(os.path.join(self.mega_folder_path, "BV4"), "Examination"), "Exams")
         if not os.path.isdir(LOCAL_BACKUP_PATH):
             os.makedirs(LOCAL_BACKUP_PATH)
@@ -452,8 +462,8 @@ class BV4_STATEX_StudentLogic(ScriptedLoadableModuleLogic):
         folder = str(qt.QFileDialog.getExistingDirectory())
         return folder
 
-    def onLoadDatasetsButtonPressed(self, mega_folder_path):
-        self.setPaths(mega_folder_path)
+    def onLoadDatasetsButtonPressed(self, mega_folder_path, synology_folder_path, local_folder_path):
+        self.setPaths(mega_folder_path, synology_folder_path, local_folder_path)
         slicer.util.loadScene(os.path.join(self.dataset_path, DATASETS_FILE_NAME))
 
     def onLoadStructuresButtonPressed(self, flip_computer, student_name, exam_nr):
@@ -546,6 +556,8 @@ class BV4_STATEX_StudentLogic(ScriptedLoadableModuleLogic):
             return -1
         #self.saveNodeToFile(self.node, os.path.join(LOCAL_MARKUP_PATH, self.filename))
         self.saveNodeToFile(self.node, os.path.join(os.path.join(self.mega_markup_path, f"Flip-{self.flip_computer}"), self.filename))
+        self.saveNodeToFile(self.node, os.path.join(os.path.join(self.synology_markup_path, f"Flip-{self.flip_computer}"), self.filename))
+        self.saveNodeToFile(self.node, os.path.join(os.path.join(self.local_markup_path, f"Flip-{self.flip_computer}"), self.filename))
         slicer.mrmlScene.RemoveNode(self.node)
         self.resetWindow()
         self.resetAnsweredQuestions()
@@ -609,6 +621,9 @@ class BV4_STATEX_StudentLogic(ScriptedLoadableModuleLogic):
         elif dataset.lower() == EX_VIVO.lower():
             self.displaySelectVolume(EX_VIVO_VOLUME_NAME)
             self.current_dataset = EX_VIVO
+        elif dataset.lower() == EXAMD.lower():
+            self.displaySelectVolume(EXAMD_VOLUME_NAME)
+            self.current_dataset = EXAMD
         else:
             print(f"\nDataset: {dataset} existerar ej\n")
 
